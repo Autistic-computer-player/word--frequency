@@ -1,0 +1,220 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#define ERROR 0
+#define Maxlen 200 
+#define OK 1
+typedef struct node 
+{
+    char word[Maxlen];
+    double frequency;
+    int line;
+    int list;
+    struct node * next;
+}WordNode;
+WordNode * Word=NULL;
+WordNode *wordSearch(char *word,int &num,int &i,int &j)
+{
+    WordNode *node=NULL;
+    if(Word==NULL)//若头结点为空
+    {
+        node = (WordNode*)malloc(sizeof(WordNode));
+        node->next=NULL;
+        //将第一个单词赋值给这个新结点
+        strcpy(node->word, word);
+        //初始化该单词的出现次数
+        node->frequency = 0;
+        num+=1;
+        Word=node;
+        node->list=i;
+        node->line=j;
+        return node;
+    }
+    WordNode *nextNode = Word;
+    WordNode *preNode = NULL;
+    while(nextNode != NULL && strcmp(nextNode->word, word) != 0)
+    {
+        preNode = nextNode;
+        nextNode = nextNode->next;
+    }
+    //若该单词不存在，则在链表中生成新结点
+    if(nextNode == NULL)
+    {
+        node = (WordNode*)malloc(sizeof(WordNode));
+        strcpy(node->word, word);
+        node->frequency = 0;
+        node->next = Word->next;
+        Word->next = node;
+        num+=1;
+        node->list=i;
+        node->line=j;
+        return node;
+    }
+    else
+    {
+        num+=1;
+        nextNode->list=i;
+        nextNode->line=j;
+        return nextNode;
+    }
+}
+
+int WordJob(char word[])
+{
+    int i=0,k=0,j=0;
+    char *specialChar = "(,.;:'?!><]+=|*&^%$#@\[)""-`~";//定义特殊字符集
+    //筛选并将字符串中的大写字母转化为小写字母
+    for(i = 0;i<strlen(word);i++)
+    {
+        if(word[i]>='A'&& word[i]<='Z')
+        {
+            word[i] += 32;
+        }
+        //筛选并去除字符串中的特殊字符
+        for(k = 0;k<strlen(specialChar);k++)
+        {
+            if(word[i] == specialChar[k])
+            {
+                while(i<strlen(word))
+                {
+                    word[i] = word[i+1];
+                    i++;
+                }
+                j++;
+            }
+        }
+    }
+    return strlen(word)-j;
+}
+
+void PrintFirstTenTimes(double a,double b,int &num)//筛选出概率在阙值a与阙值b之间的单词
+{
+    int n=0;
+    float x=0;
+    if(Word == NULL)
+    {
+        printf("该文件无内容!\n");
+    }
+    else
+    {
+        WordNode *preNode = Word;
+        printf("在阙值%.2lf与阙值%.2lf之间的单词、次数及位置: \n",a,b);
+        while (preNode != NULL) 
+        {
+            if(preNode->frequency/num<=b&&preNode->frequency/num>=a)
+            {
+                printf("%s 出现频率 %lf 首次出现位置 第%d行 第%d个\n",preNode->word,preNode->frequency/num,preNode->line,preNode->list);
+                x=x+preNode->frequency/num; 
+                n=1;
+            }
+            preNode = preNode->next;
+        }
+        if(n==0)
+        {
+            printf("没有在阙值%.2lf和阙值%.2lf之间的单词",a,b);
+        }
+        printf("\n总概率和为%.2f",x);
+    }
+}
+
+int WordCount(char *word,int &num,int &i,int &j)
+{
+    WordNode *tmpNode = NULL;
+    tmpNode = wordSearch(word,num,i,j);
+    if(tmpNode == NULL)
+    {
+        return ERROR;
+    }
+    tmpNode->frequency++; 
+    return 0;
+}
+
+void PrintCountList(int &num)
+{
+    if(Word == NULL)
+    {
+        printf("该文件无内容！\n");        
+    }	
+    else
+    {
+        WordNode *preNode = Word;
+        printf("总词量 %d \n",num);       
+        while(preNode != NULL)
+        {    
+            printf("%s 出现次数 %.lf 首次出现位置 第%d行 第%d个\n",preNode->word,preNode->frequency,preNode->line,preNode->list);
+            preNode = preNode->next;
+        }
+    }    
+}
+
+void Release()
+{
+    if(Word == NULL)
+    {
+        return;
+    }
+    WordNode *pre = Word;
+    while(pre != NULL)
+    {
+        Word = pre->next;
+        free(pre);
+        pre = Word;     
+    }
+}
+
+int main()
+{
+    double a=0,b=0;
+    int i=1,j=1,k=0;
+    char ch=0;
+    char temp[Maxlen];
+    FILE * fp1;
+    int num= 0;
+    if((fp1=fopen("article.txt","r"))==NULL)
+    {
+        printf("文件读取失败!\n");
+        exit(1);
+    }
+    while(fscanf(fp1,"%c",&ch)!=EOF)
+    {
+        if(ch!=' '&&ch!='\n')
+        {
+            temp[k]=ch;
+            k++;
+        }
+        else
+        {
+            temp[k]='\0';
+            k=WordJob(temp); //处理大写字母及特殊字符
+            if(k!=0)
+            {
+                WordCount(temp,num,i,j);//词频统计
+                i++;
+                k=0;
+            }
+        }
+        if(ch=='\n')
+        {
+            i=1;
+            j++;
+        }
+    }
+    fclose(fp1);
+    PrintCountList(num);//输出所有节点
+    printf("请输入阙值 a ");
+    scanf("%lf",&a);
+    printf("请输入阙值 b ");
+    scanf("%lf",&b);
+    while(a>b)
+    {
+        printf("error\n请重新输入\n");
+        printf("请输入阙值 a ");
+        scanf("%lf",&a);
+        printf("请输入阙值 b ");
+        scanf("%lf",&b);
+    }
+    PrintFirstTenTimes(a,b,num);//输出所有频率在阙值a和b之间的单词
+    Release();//清除所有节点
+    printf("\n结束\n");
+    return 0;
+}
